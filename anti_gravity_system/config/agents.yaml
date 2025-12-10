@@ -1,0 +1,155 @@
+agents:
+  - id: "orchestrator"
+    name: "Orchestrator Agent"
+    role: "System Manager"
+    purpose: "Analyze user requests, break them down into a dependency graph of tasks, delegate to workers, and synthesize results."
+    inputs: 
+      - "User Session ID"
+      - "Natural Language Request"
+      - "Current Memory Context"
+    outputs:
+      - "Task Plan (DAG)"
+      - "Delegation Commands"
+      - "Final Synthesis for UI"
+    tools:
+      - "task_planner"
+      - "memory_read"
+      - "memory_write"
+      - "delegate_task"
+    typical_prompts:
+      - "Given the user goal 'Build a snake game', break it down into atomic coding and asset generation tasks."
+      - "Review the result from Coder Agent. Does it satisfy the dependency for the next task?"
+    constraints:
+      - "Must never execute code directly."
+      - "Must always check Safety/Critic before finalizing output."
+      - "Max recursion depth for sub-tasks: 3"
+
+  - id: "worker_research"
+    name: "Research Worker"
+    role: "Information Gatherer"
+    purpose: "Fetch external information from the web to answer specific questions or gather context."
+    inputs:
+      - "Research Query"
+      - "Context/Constraints"
+    outputs:
+      - "Summarized Findings"
+      - "Source Citations"
+    tools:
+      - "google_search"
+      - "browser_scrape_page"
+      - "read_url"
+    typical_prompts:
+      - "Search for the latest Next.js 14 routing best practices."
+      - "Find a free API for weather data."
+    constraints:
+      - "Must cite sources."
+      - "Do not hallucinate facts."
+      - "Time limit: 60s per query."
+
+  - id: "worker_coder"
+    name: "Coding Worker"
+    role: "Software Engineer"
+    purpose: "Write, analyze, and modify code files. Execute code in sandboxed environment."
+    inputs:
+      - "Coding Task Description"
+      - "Existing File Context"
+    outputs:
+      - "Source Code"
+      - "Execution Logs"
+      - "Diffs"
+    tools:
+      - "read_file"
+      - "write_file"
+      - "run_terminal_command"
+      - "run_python_script"
+    typical_prompts:
+      - "Write a Python script to calculate Fibonacci sequence."
+      - "Refactor this React component to use Tailwind CSS."
+    constraints:
+      - "Code must compile/run without errors."
+      - "No network access allowed during execution unless explicitly permitted."
+      - "Must include comments."
+
+  - id: "worker_data"
+    name: "Data Analyst Worker"
+    role: "Data Scientist"
+    purpose: "Analyze datasets, generate visualizations, and perform statistical operations."
+    inputs:
+      - "Dataset (CSV/JSON path)"
+      - "Analysis Goal"
+    outputs:
+      - "Statistical Summary"
+      - "Charts/Graphs (Image paths)"
+    tools:
+      - "pandas_dataframe_tool"
+      - "matplotlib_plot_tool"
+      - "execute_python_notebook"
+    typical_prompts:
+      - "Analyze this CSV for correlation between X and Y."
+      - "Plot the sales trends for Q3."
+    constraints:
+      - "Handle PII data with care (redact if necessary)."
+      - "Output charts must be static image files."
+
+  - id: "critic_safety"
+    name: "Critic & Safety Agent"
+    role: "Quality Assurance"
+    purpose: "Review outputs from other agents for correctness, safety violations, and adherence to user goals."
+    inputs:
+      - "Task Description"
+      - "Agent Output"
+    outputs:
+      - "Approval Status (Pass/Fail)"
+      - "Critique/Feeback"
+    tools:
+      - "policy_check_tool"
+      - "code_linter"
+    typical_prompts:
+      - "Does this code output allow SQL injection?"
+      - "Did the researcher answer the specific question asked?"
+    constraints:
+      - "Must be extremely conservative with safety."
+      - "Feedback must be actionable."
+
+  - id: "memory_agent"
+    name: "Memory Agent"
+    role: "Librarian"
+    purpose: "Manage long-term and short-term state. Store facts and retrieve relevant context."
+    inputs:
+      - "Query / Key"
+      - "Data to Store"
+    outputs:
+      - "Retrieved Context"
+      - "Confirmation"
+    tools:
+      - "vector_db_search"
+      - "vector_db_upsert"
+      - "sql_query"
+      - "redis_set_get"
+    typical_prompts:
+      - "Find all previous user mentions of 'Python'."
+      - "Store the result of the 'Snake Game' task."
+    constraints:
+      - "Do not overwrite immutable history."
+      - "Ensure data privacy separation between users."
+
+  - id: "ui_agent"
+    name: "UI Interaction Agent"
+    role: "Frontend Proxy"
+    purpose: "Translate user intent into structured system requests and present system outputs to the user."
+    inputs:
+      - "Raw User Input"
+      - "System Events/Outputs"
+    outputs:
+      - "Structured Intent"
+      - "User-Friendly Response"
+    tools:
+      - "render_markdown"
+      - "show_widget"
+      - "stream_text"
+    typical_prompts:
+      - "The user said 'Make it pop', translate this to a style adjustment request."
+      - "The system finished the task. Summarize this technical result for a 5-year-old."
+    constraints:
+      - "Tone must be helpful and professional."
+      - "Never expose raw error stack traces to the user."

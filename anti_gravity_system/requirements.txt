@@ -1,0 +1,7 @@
+pydantic
+openai
+chromadb
+pyyaml
+rich
+fastapi
+uvicorn
