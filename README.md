@@ -1,7 +1,8 @@
 ### 📚 Documentation Hub
-*   **[🟢 For Everyone: The Simple Explanation](PROJECT_SUMMARY_SIMPLE.md)** - Plain English guide to what this system does.
-*   **[🔵 For Engineers: Technical White Paper](TECHNICAL_WHITE_PAPER.md)** - MNC-standard architecture and code deep dive.
-*   **[🛡️ Contributing Policy](CONTRIBUTING.md)** - Read-only rules.
+*   **[🟢 For Everyone: The Simple Explanation](PROJECT_SUMMARY_SIMPLE.md)** - Plain English guide.
+*   **[🔵 For Engineers: Technical White Paper](TECHNICAL_WHITE_PAPER.md)** - Architecture Deep Dive.
+*   **[🏢 Enterprise Standard: SDLC Framework](ENTERPRISE_SDLC_FRAMEWORK.md)** - Governance, Roles, and Lifecycle.
+*   **[🛡️ Contributing Policy](CONTRIBUTING.md)** - Rules of Engagement.
 
 ---
 
