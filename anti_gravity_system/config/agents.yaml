@@ -24,6 +24,23 @@ agents:
       - "Must always check Safety/Critic before finalizing output."
       - "Max recursion depth for sub-tasks: 3"
 
+  - id: "planner"
+    name: "Planner Agent"
+    role: "planner"
+    purpose: "Generate detailed plans for tasks based on high-level goals."
+    inputs:
+      - "High-level Goal"
+      - "Current Context"
+    outputs:
+      - "Detailed Task Plan"
+    tools: []
+    model: "gpt-4"
+    system_prompt_id: "Planner"
+    typical_prompts:
+      - "Create a step-by-step plan to implement a user authentication system."
+    constraints:
+      - "Plans must be actionable and granular."
+
   - id: "worker_research"
     name: "Research Worker"
     role: "Information Gatherer"

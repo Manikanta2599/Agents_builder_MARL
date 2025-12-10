@@ -73,17 +73,27 @@ class CodingWorker(BaseWorker):
             "error": exec_result.error
         }
 
+from .planner import PlannerAgent
+
+
 class WorkerFactory:
     @staticmethod
     def create_worker(config: Dict[str, Any]) -> BaseWorker:
         role_map = {
             "worker_research": ResearchWorker,
-            "worker_coder": CodingWorker
+            "worker_coder": CodingWorker,
+            "planner": PlannerAgent
         }
-        # Fallback for unknown workers
-        worker_class = role_map.get(config['id'], BaseWorker) # BaseWorker will raise NotImplemented if used
-        if worker_class == BaseWorker:
-             # Basic generic worker logic if needed, or specific error
-             logger.warning(f"Unknown worker type {config['id']}, returning BaseWorker")
-             
+        
+        # Handle flexible ID matching
+        worker_id = config.get('id', '')
+        worker_class = BaseWorker
+        
+        if "research" in worker_id:
+            worker_class = ResearchWorker
+        elif "coder" in worker_id or "coding" in worker_id:
+            worker_class = CodingWorker
+        elif "planner" in worker_id:
+            worker_class = PlannerAgent
+            
         return worker_class(config)

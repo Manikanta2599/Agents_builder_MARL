@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Paperclip, Bot, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Paperclip, Bot, User, Mic } from "lucide-react";
 import { api } from "@/services/api";
+
+declare global {
+    interface Window {
+        webkitSpeechRecognition: any;
+    }
+}
 
 type Props = {
     initialPrompt: string;
@@ -16,6 +22,26 @@ export default function ChatInterface({ initialPrompt, onResponse, sessionId }: 
     ]);
     const [input, setInput] = useState(initialPrompt);
     const [loading, setLoading] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+
+    const startListening = () => {
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new window.webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => setIsListening(true);
+            recognition.onend = () => setIsListening(false);
+            recognition.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                setInput(prev => prev + (prev ? " " : "") + transcript);
+            };
+            recognition.start();
+        } else {
+            alert("Voice input not supported in this browser.");
+        }
+    };
 
     const sendMessage = async () => {
         if (!input.trim() || loading) return;
@@ -75,7 +101,13 @@ export default function ChatInterface({ initialPrompt, onResponse, sessionId }: 
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                     />
-                    <button onClick={sendMessage} disabled={loading} className="ml-4 p-2 bg-purple-600 rounded-lg hover:bg-purple-500 text-white transition-colors disabled:opacity-50">
+                    <button
+                        onClick={startListening}
+                        className={`mr-2 p-2 rounded-full transition-colors ${isListening ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        <Mic size={18} />
+                    </button>
+                    <button onClick={sendMessage} disabled={loading} className="ml-2 p-2 bg-purple-600 rounded-lg hover:bg-purple-500 text-white transition-colors disabled:opacity-50">
                         <Send size={18} />
                     </button>
                 </div>
