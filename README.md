@@ -1,4 +1,11 @@
-# Anti-Gravity System 🌌🧠
+### 📚 Documentation Hub
+*   **[🟢 For Everyone: The Simple Explanation](PROJECT_SUMMARY_SIMPLE.md)** - Plain English guide to what this system does.
+*   **[🔵 For Engineers: Technical White Paper](TECHNICAL_WHITE_PAPER.md)** - MNC-standard architecture and code deep dive.
+*   **[🛡️ Contributing Policy](CONTRIBUTING.md)** - Read-only rules.
+
+---
+
+# Anti-Gravity: Autonomous Agent System 🚀🌌🧠
 
 > Autonomous Multi-Agent Orchestration Engine with "Magic Window" UI.
 
