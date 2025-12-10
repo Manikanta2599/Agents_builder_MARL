@@ -26,7 +26,7 @@ export default function AgentVisualizer({ steps = [] }: { steps?: any[] }) {
                             </div>
 
                             {/* Card */}
-                            <div className="p-4 rounded-xl border transition-all duration-200 bg-white/5 border-white/10 opacity-70 hover:opacity-100">
+                            <div className="p-4 rounded-xl border transition-all duration-200 bg-white bg-opacity-5 border-white/10 opacity-70 hover:opacity-100">
 
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs font-mono uppercase tracking-wider text-gray-500">{agent}</span>

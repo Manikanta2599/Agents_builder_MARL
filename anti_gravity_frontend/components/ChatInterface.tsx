@@ -90,7 +90,7 @@ export default function ChatInterface({ initialPrompt, onResponse, sessionId }: 
 
             {/* Input */}
             <div className="p-4 border-t border-white/5 bg-black/20 backdrop-blur-lg">
-                <div className="flex items-center bg-white/5 rounded-xl border border-white/10 px-4 py-3 focus-within:border-purple-500/50 transition-colors">
+                <div className="flex items-center bg-white bg-opacity-5 rounded-xl border border-white/10 px-4 py-3 focus-within:border-purple-500/50 transition-colors">
                     <button className="text-gray-400 hover:text-white mr-4">
                         <Paperclip size={20} />
                     </button>
