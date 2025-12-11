@@ -8,6 +8,10 @@ from anti_gravity_system.src.agents.memory_agent import MemoryAgent
 from anti_gravity_system.src.utils.logger import logger
 from anti_gravity_system.src.utils.prompt_loader import load_system_prompts
 
+# New Core Modules
+from anti_gravity_system.src.core.metrics import MetricsTracker
+from anti_gravity_system.src.core.safety_layer import SafetyLayer
+
 class OrchestratorAgent:
     def __init__(self, config: Dict[str, Any], agents_config: List[Dict[str, Any]]):
         self.config = config
@@ -19,9 +23,11 @@ class OrchestratorAgent:
         self.system_prompt = prompts.get("Orchestrator", "You are the Orchestrator.")
         logger.info(f"Orchestrator loaded system prompt: {len(self.system_prompt)} chars")
         
-        # Initialize Sub-Agents
+        # Initialize Components
         self.memory = MemoryAgent({"role": "Memory", "name": "MemoryCore"})
         self.critic = CriticAgent({"role": "Critic", "name": "SystemCritic"})
+        self.metrics = MetricsTracker()
+        self.safety = SafetyLayer()
         
         # Initialize Workers from config
         self.workers = {}
@@ -33,109 +39,126 @@ class OrchestratorAgent:
         logger.info(f"Orchestrator initialized with {len(self.workers)} workers.")
 
     def run(self, user_request: str) -> Dict[str, Any]:
+        """
+        Main Agent Loop: Observe -> Think -> Plan -> Act -> Evaluate -> Improve
+        """
         session_id = str(uuid.uuid4())
-        logger.info(f"Starting Session {session_id} for request: {user_request}")
+        logger.info(f"Starting Session {session_id}")
+        self.metrics.start_timer("total_session_time")
+
+        # 0. Safety Check (Input)
+        if not self.safety.validate_input(user_request):
+            return {"status": "rejected", "error": "Safety violation in input."}
+
+        # 1. Observe
+        context = self._observe(user_request, session_id)
         
-        # 1. Observe: Store & Recall
-        self.memory.process_request({
-            "action": "store",
-            "payload": {
-                "content": user_request, "type": "USER_REQUEST", "session_id": session_id
-            }
-        })
-        context = self.memory.process_request({
-             "action": "search",
-             "payload": {"query": user_request}
-        })
-
-        # 2. Think & Plan
-        plan = self._generate_plan(user_request, context)
-        logger.info(f"Generated Plan: {len(plan)} steps")
-
+        # 2. Think
+        analysis = self._think(user_request, context)
+        
+        # 3. Plan
+        plan = self._plan(user_request, analysis)
+        self.metrics.record_metric("plan_steps", len(plan), "count")
+        
         results = []
         
-        # 3. Execution Loop
+        # 4. Act Loop
         for step in plan:
-            if not self._execute_step(step, session_id, results):
-                # If a step critically fails (and critic can't fix), we stop
-                logger.error(f"Stopping execution due to failure in step: {step['task']}")
-                break
-                
-        # 4. Synthesize Final Response
+            # 5. Act
+            result = self._act(step, session_id)
+            
+            # 6. Evaluate
+            review = self._evaluate(step, result)
+            
+            if not review['approved']:
+                # 7. Improve (Simple Retry Logic for MVP)
+                logger.warning(f"Step rejected: {review.get('feedback')}. Retrying...")
+                self.metrics.record_metric("retry_count", 1, "count")
+                step['task'] = f"{step['task']} (Correction: {review.get('feedback')})"
+                result = self._act(step, session_id) # Retry once
+            
+            results.append({"step": step, "result": result})
+            
+            # Safety Check (Output)
+            if not self.safety.validate_output(str(result)):
+                 logger.warning("Safety violation in step output. masking.")
+                 result = "[REDACTED]"
+
+        # Final Response
         final_response = self._synthesize_response(user_request, results)
+        
+        self.metrics.stop_timer("total_session_time")
+        self.metrics.record_metric("task_completion", 1, "count")
 
         return {
             "session_id": session_id,
             "status": "completed",
             "final_response": final_response,
-            "steps": results
+            "metrics": self.metrics.get_summary()
         }
 
-    def _generate_plan(self, request: str, context: Any) -> List[Dict[str, Any]]:
-        """
-        Generates a DAG plan using the LLM.
-        """
-        logger.info("Thinking and Planning...")
+    # --- Cognitive Stages ---
+
+    def _observe(self, request: str, session_id: str) -> Dict[str, Any]:
+        logger.info("Stage: OBSERVE")
+        # Store current request
+        self.memory.process_request({
+            "action": "store",
+            "payload": {"content": request, "type": "USER_REQUEST", "session_id": session_id}
+        })
+        # Recall relevant context
+        context = self.memory.process_request({
+             "action": "search",
+             "payload": {"query": request}
+        })
+        return context
+
+    def _think(self, request: str, context: Any) -> str:
+        logger.info("Stage: THINK")
+        messages = [
+            {"role": "system", "content": "Analyze the user's request and context. Identify key intents."},
+            {"role": "user", "content": f"Request: {request}. Context: {context}"}
+        ]
+        return self.llm.chat_completion(messages)
+
+    def _plan(self, request: str, analysis: str) -> List[Dict[str, Any]]:
+        logger.info("Stage: PLAN")
+        # Use the analysis to guide planning
         messages = [
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": f"Plan this request: '{request}'. Context: {context}"}
+            {"role": "user", "content": f"Create a step-by-step plan for: {request}\nAnalysis: {analysis}"}
         ]
-        
-        # Helper schema for the LLM to follow
-        schema = "List[{\"id\": int, \"task\": str, \"worker\": str (worker_research|worker_coder|worker_data)}]"
-        
+        schema = "List[{\"id\": int, \"task\": str, \"worker\": str}]"
         plan = self.llm.generate_structured_response(messages, schema)
         
-        # Fallback for mock mode if structured response fails or returns empty
-        if not plan and self.llm.mock_mode:
+        # Fallback
+        if not plan:
             return self._mock_plan(request)
-            
         return plan if isinstance(plan, list) else []
 
-    def _execute_step(self, step: Dict[str, Any], session_id: str, results_accumulator: List[Any]) -> bool:
-        """
-        Executes a single step with Critic Loop. Returns True if successful.
-        """
-        worker_id = step.get('worker') or step.get('worker_id')
-        task = step['task']
+    def _act(self, step: Dict[str, Any], session_id: str) -> Any:
+        logger.info(f"Stage: ACT (Task: {step['task']})")
+        worker_id = step.get('worker')
+        worker = self.workers.get(worker_id) or self.workers.get("worker_research")
         
-        worker = self.workers.get(worker_id)
-        if not worker:
-            logger.error(f"Worker {worker_id} not found! Defaulting to Research.")
-            worker = self.workers.get("worker_research")
+        self.metrics.start_timer("step_latency")
+        result = worker.execute_task(step['task'])
+        self.metrics.stop_timer("step_latency")
+        
+        self._store_result(session_id, step['task'], result)
+        return result
 
-        # Retry Loop (Critics)
-        max_retries = 2
-        for attempt in range(max_retries + 1):
-            logger.info(f"delegating to {worker.name}: {task} (Attempt {attempt+1})")
-            
-            # Execute
-            work_result = worker.execute_task(task)
-            
-            # Evaluate
-            review = self.critic.review_task(task, work_result)
-            
-            if review['approved']:
-                # Success
-                self._store_result(session_id, task, work_result)
-                results_accumulator.append({"step": step, "result": work_result, "review": review})
-                return True
-            else:
-                # Failure -> Improve
-                logger.warning(f"Critic Rejected: {review.get('feedback')}")
-                # Update task with feedback for next iteration
-                task = f"Fix previous error: {review.get('feedback')}. Original Task: {task}"
-                
-        return False
-        
+    def _evaluate(self, step: Dict[str, Any], result: Any) -> Dict[str, Any]:
+        logger.info("Stage: EVALUATE")
+        return self.critic.review_task(step['task'], result)
+
     def _store_result(self, session_id, task, result):
         self.memory.process_request({
             "action": "store", 
             "payload": {
                 "content": str(result), 
                 "type": "TASK_RESULT", 
-                "session_id": session_id,
-                "metadata": {"task": task}
+                "session_id": session_id
             }
         })
 
@@ -147,7 +170,6 @@ class OrchestratorAgent:
         return self.llm.chat_completion(messages)
 
     def _mock_plan(self, request: str) -> List[Dict[str, str]]:
-        # Fallback heuristic
         plan = []
         req_lower = request.lower()
         if "research" in req_lower or "find" in req_lower:

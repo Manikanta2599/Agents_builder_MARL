@@ -17,6 +17,23 @@ class BaseTool:
     def execute(self, **kwargs) -> ToolResult:
         raise NotImplementedError
 
+    def get_json_schema(self) -> Dict[str, Any]:
+        """
+        Returns the OpenAI-compatible JSON schema for this tool.
+        """
+        # Simplistic default schema generation (in real world use pydantic inspection)
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": {} # Override in subclasses for real params
+                }
+            }
+        }
+
 class ReadFileTool(BaseTool):
     name = "read_file"
     description = "Reads content from a file"
