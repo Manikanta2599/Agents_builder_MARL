@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 from .workers import BaseWorker
 from ..core.llm_provider import LLMProvider
-from ..utils.prompt_loader import PromptLoader
 
 class PlannerAgent(BaseWorker):
     """
@@ -11,7 +10,6 @@ class PlannerAgent(BaseWorker):
     def __init__(self, config: Dict[str, Any]):
         # BaseWorker init will handle config, name, role, llm, tools, and system prompt loading
         super().__init__(config)
-        self.prompt_loader = PromptLoader() # Re-instantiate if needed or access via self.system_prompt
     
     def execute_task(self, task_description: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """

@@ -4,6 +4,8 @@ import { MessageSquare, Cpu, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import MetricsDashboard from "../components/MetricsDashboard";
+
 export default function Home() {
   const [prompt, setPrompt] = useState("");
 
@@ -11,6 +13,11 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center h-full p-8 space-y-12 relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none" />
+
+      {/* Metrics Dashboard */}
+      <div className="z-10 w-full max-w-4xl mb-8">
+        <MetricsDashboard />
+      </div>
 
       {/* Hero Section */}
       <div className="text-center z-10 space-y-4">

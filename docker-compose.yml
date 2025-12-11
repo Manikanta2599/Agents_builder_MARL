@@ -12,6 +12,44 @@ services:
       - ./anti_gravity_system/config:/app/config
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CHROMA_HOST=chromadb
+      - REDIS_HOST=redis
+    depends_on:
+      - chromadb
+      - redis
+    networks:
+      - antigravity_net
+
+  # Vector DB
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: antigravity_chroma
+    ports:
+      - "8000"
+    volumes:
+      - ./antigravity_data/chroma:/chroma/chroma
+    networks:
+      - antigravity_net
+
+  # Cache / Msg Queue
+  redis:
+    image: redis:alpine
+    container_name: antigravity_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - antigravity_net
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: antigravity_prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./k8s/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - antigravity_net
 

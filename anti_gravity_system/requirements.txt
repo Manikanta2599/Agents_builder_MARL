@@ -5,3 +5,5 @@ pyyaml
 rich
 fastapi
 uvicorn
+prometheus-client
+python-json-logger
